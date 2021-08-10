@@ -1,0 +1,30 @@
+2021-06-28 21:23:54.775 [main] INFO . - user input: C:\Users\91935\Huawei\DevEco Studio 2.1.0.303\tools\openjdk\bin\java,-j,-source,@C:/Users/91935/DevEcoStudioProjects/HDImageView/.idea/code-check/java/detect.txt,-output,C:/Users/91935/DevEcoStudioProjects/HDImageView/.idea/code-check/java/output.xml
+2021-06-28 21:23:54.779 [main] INFO . - CodeMars Version:2.1.2.sp4
+2021-06-28 21:23:54.953 [main] INFO . - starting analyzing.
+2021-06-28 21:23:54.973 [main] INFO . - start collecting report.
+2021-06-28 21:23:54.979 [CodeMars1] INFO . - Command: "C:\Users\91935\Huawei\DevEco Studio 2.1.0.303\plugins\codecheck\lib\CodeMars\engines\SecFinder-J\bin\run_SecFinder-J.bat",-filelist,C:\Users\91935\DevEcoStudioProjects\HDImageView\.idea\code-check\java\filelist_2021_06_28_21_23_54_974_20.txt,-f,xml,-default,-progress,-r,C:\Users\91935\DevEcoStudioProjects\HDImageView\.idea\code-check\java\\errorreport_2021_06_28_21_23_54_311_57.xml,-ruleclasspath,file:///C:\Users\91935\DevEcoStudioProjects\HDImageView\.idea\code-check\java\ruleclasspath.txt
+2021-06-28 21:23:56.577 [Thread-2] INFO . - Jun 28, 2021 9:23:56 PM com.huawei.secfinderj.SecFinderJ needScan
+2021-06-28 21:23:56.577 [Thread-2] INFO . - INFO: SecFinder-J Version: 2.1.3
+2021-06-28 21:23:56.764 [Thread-1] INFO . - 2021-06-28 21:23:56.685: SecFinder-J Output: Inspect start...
+2021-06-28 21:23:58.930 [Thread-1] INFO . - 2021-06-28 21:23:58.929: SecFinder-J Output: Load checkers...
+2021-06-28 21:23:59.458 [Thread-1] INFO . - 2021-06-28 21:23:59.458: SecFinder-J Output: Load config...
+2021-06-28 21:23:59.559 [Thread-1] INFO . - 2021-06-28 21:23:59.558: SecFinder-J Output: step 1/4: Find files
+2021-06-28 21:23:59.639 [Thread-1] INFO . - 2021-06-28 21:23:59.639: SecFinder-J Output: step 2/4: Process files
+2021-06-28 21:23:59.732 [Thread-1] INFO . - 2021-06-28 21:23:59.732: SecFinder-J Output: step 3/4: Run analysis...
+2021-06-28 21:23:59.734 [Thread-1] INFO . - 2021-06-28 21:23:59.734: SecFinder-J Output: [SecFinder-J--Thread--1] - during processing of [DecelerateInterpolator.java]
+2021-06-28 21:24:00.904 [Thread-1] INFO . - 2021-06-28 21:24:00.904: SecFinder-J Output: step 4/4: Result output...
+2021-06-28 21:24:00.905 [Thread-1] INFO . - 2021-06-28 21:24:00.904: SecFinder-J Output: Inspect finish...
+2021-06-28 21:24:00.905 [Thread-1] INFO . - Analysis result:
+2021-06-28 21:24:00.905 [Thread-2] INFO . - Jun 28, 2021 9:24:00 PM com.huawei.secfinderj.override.HwPmd end
+2021-06-28 21:24:00.905 [Thread-2] INFO . - INFO: SecFinder-J run successed!
+2021-06-28 21:24:00.907 [Thread-1] INFO . -     files analyzed      : 1
+2021-06-28 21:24:00.907 [Thread-1] INFO . -     lines analyzed      : 94
+2021-06-28 21:24:00.907 [Thread-1] INFO . -     rules used          : 59
+2021-06-28 21:24:00.907 [Thread-1] INFO . -     issues detected     : 0
+2021-06-28 21:24:00.907 [Thread-1] INFO . -     time cost(sec)      : 4
+2021-06-28 21:24:00.907 [Thread-1] INFO . - 
+2021-06-28 21:24:00.981 [CodeMars1] INFO . - start parse errorreport xml
+2021-06-28 21:24:00.987 [CodeMars1] INFO . - parse xml time : 21
+2021-06-28 21:24:00.988 [CodeMars1] INFO . - end parse errorreport xml
+2021-06-28 21:24:00.992 [main] INFO . - end collecting report.
+2021-06-28 21:24:00.993 [main] INFO . - end analyzing.
