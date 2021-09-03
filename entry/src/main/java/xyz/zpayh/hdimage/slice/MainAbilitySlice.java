@@ -14,7 +14,7 @@ public class MainAbilitySlice extends AbilitySlice {
         super.onStart(intent);
         super.setUIContent(ResourceTable.Layout_ability_main);
         final HiLogLabel LABEL_LOG = new HiLogLabel(3, 0xD001100, "MainAbilitySlice");
-        String IMAGE = "https://pic1.zhimg.com/80/v2-4514d92451b190a0239a438a0736ec78_hd.jpg";
+        String IMAGE = "https://pic1.zhimg.com/80/v2-4514d92451b190a0239a438a0736ec78_hd.jpg";  //https://wallpapercave.com/wp/wp2665204.jpg
 
         HiLog.debug(LABEL_LOG , "We are in the main ability slice");
 

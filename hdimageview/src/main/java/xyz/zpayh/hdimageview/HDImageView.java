@@ -18,30 +18,25 @@ package xyz.zpayh.hdimageview;
 
 
 import ohos.aafwk.ability.DataAbilityRemoteException;
-import ohos.agp.animation.Animator;
 import ohos.agp.render.PixelMapHolder;
 import ohos.aafwk.ability.Ability;
 import ohos.agp.utils.*;
 import ohos.agp.window.service.Display;
 import ohos.agp.window.service.DisplayAttributes;
 import ohos.agp.window.service.DisplayManager;
-import ohos.data.DatabaseHelper;
 import ohos.eventhandler.EventRunner;
 import ohos.global.resource.NotExistException;
-import ohos.global.resource.ResourceManager;
 import ohos.global.resource.WrongTypeException;
-import ohos.global.resource.solidxml.Node;
-import ohos.global.resource.solidxml.TypedAttribute;
 import ohos.multimodalinput.event.MmiPoint;
 import ohos.multimodalinput.event.TouchEvent;
 import ohos.utils.PacMap;
-import ohos.data.preferences.Preferences;
 import ohos.agp.render.Canvas;
 import ohos.app.Context;
 import ohos.media.image.PixelMap;
 import ohos.agp.render.render3d.BuildConfig;
 import ohos.agp.components.*;
 import java.io.IOException;
+import java.lang.ref.WeakReference;
 import java.util.*;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
@@ -94,9 +89,16 @@ import static xyz.zpayh.hdimageview.util.Utils.fileRect;
  */
 
 import ohos.utils.PlainArray;
+import xyz.zpayh.hdimageview.util.LogUtil;
+import xyz.zpayh.hdimageview.util.Utils;
 
-public class HDImageView extends Component implements Component.TouchEventListener , Component.DrawTask ,
- Component.DraggedListener {
+public class HDImageView extends Component
+        implements
+        Component.TouchEventListener,
+        Component.DrawTask,
+        Component.LayoutRefreshedListener,
+        Component.EstimateSizeListener,
+        Component.DraggedListener {
 
     private static final String TAG = "HDImageView";
 
@@ -132,7 +134,7 @@ public class HDImageView extends Component implements Component.TouchEventListen
 
     private Context mContext;
     /**
-     * 加载更高分辨率的贴图之前达到的密度
+     * Density reached before loading higher resolution textures
      */
     private int mMinimumMappingDpi = -1;
 
@@ -152,28 +154,28 @@ public class HDImageView extends Component implements Component.TouchEventListen
     private boolean mZoomEnabled = true;
     private boolean mQuickScaleEnabled = true;
 
-    //线程处理
-//    private EventHandler mOriginalHandler;
+    //Thread processing
+    private EventHandler mOriginalHandler;
     private Executor mOriginalExecutor;
 
-    //双击变焦行为
+    //Double-click zoom behavior
     private float mDoubleTapZoomScale = 1F;
     @Zoom
     private int mDoubleTapZoomStyle = ZOOM_FOCUS_FIXED;
 
-    // 缩放开始时的当前缩放值和缩放值
+    // The current zoom value and zoom value at the start of zooming
     private float mScale;
     private float mScaleStart;
 
-    // 源图像左上角的屏幕坐标
+    // The screen coordinates of the upper left corner of the source image
     private PointF mViewTranslate;
     private final PointF mViewTranslateStart = new PointF(0F, 0F);
 
-    //源坐标为中心，在视图准备好之前，当外部设置新位置时使用
+    //The source coordinate is the center, used when setting a new position outside before the view is ready
     private float mPendingScale = -1f;
     private PointF mSourcePendingCenter;
 
-    // 源图像尺寸和方向 - 尺寸与未旋转图像有关
+    // Source image size and orientation-the size is related to the unrotated image
     private int mSourceWidth;
     private int mSourceHeight;
     private int mSourceOrientation;
@@ -181,39 +183,39 @@ public class HDImageView extends Component implements Component.TouchEventListen
 
     private ImageSourceLoadListener mImageSourceLoadListener;
 
-    //双指缩放正在进行
+    //Two-finger zoom in progress
     private boolean mIsZooming;
-    //单指平移正在进行中
+    //One finger pan is in progress
     private boolean mIsPanning;
-    //当前手势中使用的最大触摸
+    //Maximum touch used in current gesture
     private int mMaxTouchCount;
 
-    //快速滑动检测器
+    //Quick swipe detector
     private Component.DraggedListener mFlingDetector;
 //    private Component.ClickedListener mSingleClickDetector;
 //    private Component.DoubleClickedListener mDoubleClickDetector;
     private Component.TouchEventListener mTouchDetector;
     private Component.TouchEventListener mLongPressDetector;
 
-    //平铺和图像解码
+    //Tiling and image decoding
     private BitmapDataSource mBitmapDataSource;
     final Object mLock = new Object();
 
-    // 调试值
+    // Debug value
     private final PointF mLastViewCenter = new PointF(0F, 0F);
     private float mLastViewDistance;
 
     private int mDuration = DEFAULT_DURATION;
-    public static float mFactor;
-    // 缩放和中心动画跟踪
+ //   public static float mFactor;
+    // Zoom and center animation tracking
     private SimpleValueAnimator mValueAnimator;
     private AnimatorListener mAnimatorListener;
     private AnimatorUpdateListener mAnimatorUpdateListener;
     private DecelerateInterpolator mScaleAnimationInterpolator;
     private DecelerateInterpolator mTranslationAnimationInterpolator;
-    //是否已将通知发送到子类
+    //Whether the notification has been sent to the subclass
     private boolean mReadySent;
-    //基层加载的通知是否已发送到子类
+    //Whether the notification loaded by the base layer has been sent to the subclass
     private boolean mImageLoadedSent;
 
     private OnBitmapLoadListener mOnBitmapLoadListener;
@@ -226,9 +228,9 @@ public class HDImageView extends Component implements Component.TouchEventListen
     private final ScaleAndTranslate mSatTemp = new ScaleAndTranslate();
     private final Matrix mMatrix = new Matrix();
 
-    private Preferences sharedPreferences;
+   /* private Preferences sharedPreferences;
     private final String PREFERENCE_KEY = "MY_PREFERENCE";
-
+*/
     private float mDensity;
 
     private float[] mSrcArray = new float[8];
@@ -282,6 +284,8 @@ public class HDImageView extends Component implements Component.TouchEventListen
     }
 
     private void init(Context context, @Nullable AttrSet attrset, int defStyleAttr) throws NotExistException, WrongTypeException, IOException {
+
+        LogUtil.info(TAG, "init method called");
         mContext = context;
         AssetInterceptor.setContext(context);
         FileInterceptor.setFileInterceptor_context(context);
@@ -306,21 +310,22 @@ public class HDImageView extends Component implements Component.TouchEventListen
         mScaleAnimationInterpolator = HDImageViewFactory.getInstance().getScaleAnimationInterpolator();
         mTranslationAnimationInterpolator = HDImageViewFactory.getInstance().getTranslationAnimationInterpolator();
 
-//        mOriginalHandler = new OriginalHandler(this);
+        EventRunner eventRunner = EventRunner.create();
+        mOriginalHandler = new OriginalHandler(eventRunner, this);
         mOriginalExecutor = Executors.newSingleThreadExecutor();
         setMinimumDpi(160);
         setDoubleTapZoomDpi(160);
-        onMeasure();
+     //   onMeasure();
         setGestureDetector();
         setDraggedListener(DRAG_VERTICAL , this);
-        run_Runner(this);
+     //   run_Runner(this);
 
         if(attrset != null) {
             mDuration = attrset.getAttr(Image_Duration).isPresent() ?
                     attrset.getAttr(Image_Duration).get().getIntegerValue() : DEFAULT_DURATION;
 
-            mFactor = attrset.getAttr(Decelerate_Interpolator_Factor).isPresent() ?
-                    attrset.getAttr(Decelerate_Interpolator_Factor).get().getFloatValue() : 1.0F;
+           /* mFactor = attrset.getAttr(Decelerate_Interpolator_Factor).isPresent() ?
+                    attrset.getAttr(Decelerate_Interpolator_Factor).get().getFloatValue() : 1.0F;*/
 
             String uriString = attrset.getAttr(Image_Src).isPresent() ?
                     attrset.getAttr(Image_Src).get().getStringValue() : null;
@@ -341,42 +346,91 @@ public class HDImageView extends Component implements Component.TouchEventListen
 
 
         }
+
+        setLayoutRefreshedListener(this);
+        setEstimateSizeListener(this);
+        addDrawTask(this);
     }
 
-    public static EventHandler mHandler;
-    public void run_Runner(@NotNull HDImageView view) {
-        EventRunner eventRunner = EventRunner.create();
+    private static class OriginalHandler extends EventHandler {
 
-        mHandler = new EventHandler(eventRunner.current()) {
-            @Override
-            public void processEvent(InnerEvent msg) {
-                switch (msg.eventId) {
-                    case MSG_INIT_SUCCESS:
-                        PacMap data = msg.getPacMap();
-                        view.onTilesInitialized(data.getIntValue(SOURCE_WIDTH),
-                                data.getIntValue(SOURCE_Height),
-                                data.getIntValue(SOURCE_ORIENTATION));
-                        return;
-                    case MSG_INIT_FAILED:
-                        Exception e = (Exception) msg.object;
-                        OnBitmapLoadListener listener = view.getOnBitmapLoadListener();
-                        if (e != null && listener != null) {
-                            listener.onBitmapLoadError(e);
-                        }
-                        return;
-                    case MSG_TILE_LOAD_SUCCESS:
-                        removeEvent(MSG_TILE_LOAD_SUCCESS);
-                        view.onTileLoaded();
-                        return;
-                    default:
-                        break;
-                }
+        private final WeakReference<HDImageView> mWef;
+        public OriginalHandler(EventRunner runner, HDImageView view) throws IllegalArgumentException {
+            super(runner);
+            this.mWef = new WeakReference<>(view);
+        }
+
+        @Override
+        public void processEvent(InnerEvent msg) {
+            HDImageView view = mWef.get();
+            if (view == null){
+                return;
             }
-        };
 
-        eventRunner.run();
+            switch (msg.eventId) {
+                case MSG_INIT_SUCCESS:
+                    LogUtil.info(TAG, "Process event init Success");
+                    PacMap data = msg.getPacMap();
+                    view.onTilesInitialized(data.getIntValue(SOURCE_WIDTH),
+                            data.getIntValue(SOURCE_Height),
+                            data.getIntValue(SOURCE_ORIENTATION));
+                    return;
+                case MSG_INIT_FAILED:
+                    Exception e = (Exception) msg.object;
+                    OnBitmapLoadListener listener = view.getOnBitmapLoadListener();
+                    if (e != null && listener != null) {
+                        listener.onBitmapLoadError(e);
+                    }
+                    return;
+                case MSG_TILE_LOAD_SUCCESS:
+                    LogUtil.info(TAG, "Process event tile load Success");
+                    removeEvent(MSG_TILE_LOAD_SUCCESS);
+                    view.onTileLoaded();
+                    return;
+                default:
+                    break;
+            }
+        }
     }
 
+    public EventHandler getmOriginalHandler() {
+        return mOriginalHandler;
+    }
+
+    /*public static EventHandler mHandler;
+        public void run_Runner(@NotNull HDImageView view) {
+            EventRunner eventRunner = EventRunner.create();
+
+            mHandler = new EventHandler(eventRunner.current()) {
+                @Override
+                public void processEvent(InnerEvent msg) {
+                    switch (msg.eventId) {
+                        case MSG_INIT_SUCCESS:
+                            PacMap data = msg.getPacMap();
+                            view.onTilesInitialized(data.getIntValue(SOURCE_WIDTH),
+                                    data.getIntValue(SOURCE_Height),
+                                    data.getIntValue(SOURCE_ORIENTATION));
+                            return;
+                        case MSG_INIT_FAILED:
+                            Exception e = (Exception) msg.object;
+                            OnBitmapLoadListener listener = view.getOnBitmapLoadListener();
+                            if (e != null && listener != null) {
+                                listener.onBitmapLoadError(e);
+                            }
+                            return;
+                        case MSG_TILE_LOAD_SUCCESS:
+                            removeEvent(MSG_TILE_LOAD_SUCCESS);
+                            view.onTileLoaded();
+                            return;
+                        default:
+                            break;
+                    }
+                }
+            };
+
+            eventRunner.run();
+        }
+    */
     public class ability extends Ability {
         @Override
         public void onRestoreAbilityState(PacMap inState) {
@@ -587,16 +641,60 @@ public class HDImageView extends Component implements Component.TouchEventListen
         };
     }
 
-    protected void onSizeChanged() {
+    @Override
+    public void onRefreshed(Component component) {
+        LogUtil.info(TAG, "onRefreshed method called");
         PointF sCenter = getCenter();
         if (mReadySent && sCenter != null) {
             stopAnimator();
             mPendingScale = mScale;
             mSourcePendingCenter = sCenter;
         }
+        invalidate();
     }
 
-    protected void onMeasure() {
+    /*protected void onSizeChanged() {
+        PointF sCenter = getCenter();
+        if (mReadySent && sCenter != null) {
+            stopAnimator();
+            mPendingScale = mScale;
+            mSourcePendingCenter = sCenter;
+        }
+    }*/
+
+    @Override
+    public boolean onEstimateSize(int widthEstimateConfig, int heightEstimateConfig) {
+        LogUtil.info(TAG, "onEstimateSize method called");
+
+        int widthSpecMode = EstimateSpec.getMode(widthEstimateConfig);
+        int heightSpecMode = EstimateSpec.getMode(heightEstimateConfig);
+        int parentWidth = EstimateSpec.getSize(widthEstimateConfig);
+        int parentHeight = EstimateSpec.getSize(heightEstimateConfig);
+        boolean resizeWidth = widthSpecMode != EstimateSpec.PRECISE;
+        boolean resizeHeight = heightSpecMode != EstimateSpec.PRECISE;
+        int width = parentWidth;
+        int height = parentHeight;
+        if (mSourceWidth > 0 && mSourceHeight > 0) {
+            if (resizeWidth && resizeHeight) {
+                width = getShowWidth();
+                height = getShowHeight();
+            } else if (resizeHeight) {
+                height = (int)((((double)getShowHeight()/(double)getShowWidth()) * width));
+            } else if (resizeWidth) {
+                width = (int)((((double)getShowWidth()/(double)getShowHeight()) * height));
+            }
+        }
+        width = Math.max(width, getMinWidth());
+        height = Math.max(height, getMinHeight());
+        if (BuildConfig.DEBUG) {
+            LogUtil.info(TAG, "SourceSize:(" + mSourceWidth + "," + mSourceHeight + ")");
+            LogUtil.info(TAG, "(" + width + "," + height + ")");
+        }
+        setEstimatedSize(width, height);
+
+        return false;
+    }
+  /*  protected void onMeasure() {
         int width = Math.max(getShowWidth() , getMinWidth());
         int height = Math.max(getShowHeight() , getMinHeight());
         if (BuildConfig.DEBUG) {
@@ -607,7 +705,7 @@ public class HDImageView extends Component implements Component.TouchEventListen
         layoutConfig.width = width;
         layoutConfig.height = height;
         setLayoutConfig(layoutConfig);
-    }
+    }*/
 
     @Override
     public boolean onTouchEvent(Component component, TouchEvent event) {
@@ -826,15 +924,16 @@ public class HDImageView extends Component implements Component.TouchEventListen
     @Override
     public void onDraw(Component component , Canvas canvas) {
 //        super.onDraw(canvas);
-        onMeasure();
-        onSizeChanged();
+    //    onMeasure();
+   //     onSizeChanged();
+        LogUtil.info(TAG, "onDraw method called mSourceWidth: " + mSourceWidth + " mSourceHeight: " + mSourceHeight + " getWidth: " + getWidth() + " getHeight: " + getHeight());
         if (mSourceWidth == 0 || mSourceHeight == 0 || getWidth() == 0 || getHeight() == 0) {
-            //面积为0不画
+            //If the area is 0, do not draw
             return;
         }
 
         if (mMappingMap == null && mBitmapDataSource != null) {
-            //初始化贴图
+            //Initialize the texture
             initialiseBaseLayer(getMaxBitmapDimensions(canvas));
         }
 
@@ -936,19 +1035,22 @@ public class HDImageView extends Component implements Component.TouchEventListen
         array[7] = f7;
     }
 
-    //检查贴图的基层是否准备好
+    //Check if the base layer of the texture is ready
     private boolean isBaseLayerReady() {
+        LogUtil.info(TAG, "isBaseLayerReady method called mMappingMap: " + mMappingMap);
         if (mMappingMap == null) {
             return false;
         }
 
         final List<Mapping> mappings = mMappingMap.get(mMaxSampleSize, null);
         if (mappings == null) {
+            LogUtil.info(TAG, "isBaseLayerReady failed 2nd condition");
             return false;
         }
 
         for (Mapping mapping : mappings) {
             if (mapping.mLoading || mapping.mBitmap == null) {
+                LogUtil.info(TAG, "isBaseLayerReady failed 3rd condition");
                 return false;
             }
         }
@@ -956,8 +1058,9 @@ public class HDImageView extends Component implements Component.TouchEventListen
         return true;
     }
 
-    // 检查已经准备好绘制了
+    // Check that it is ready to be drawn
     private boolean checkReady() {
+        LogUtil.info(TAG, "check Ready method called getWidth: " + getWidth() + " getHeight: " + getHeight() + " isBaseLayerReady: " + isBaseLayerReady());
         boolean ready = getWidth() > 0 && getHeight() > 0 &&
                 mSourceWidth > 0 && mSourceHeight > 0 && isBaseLayerReady();
         if (!mReadySent && ready) {
@@ -971,6 +1074,7 @@ public class HDImageView extends Component implements Component.TouchEventListen
     }
 
     private boolean checkImageLoaded() {
+        LogUtil.info(TAG, "checkImageLoaded method called");
         boolean imageLoaded = isBaseLayerReady();
         if (!mImageLoadedSent && imageLoaded) {
             preDraw();
@@ -989,6 +1093,8 @@ public class HDImageView extends Component implements Component.TouchEventListen
     }
 
     private synchronized void initialiseBaseLayer(Point maxTileDimensions) {
+
+        LogUtil.info(TAG, "initialiseBaseLayer method called");
         fitToBounds(true, mSatTemp);
 
         mMaxSampleSize = calculateInSampleSize(mSatTemp.mScale);
@@ -1006,7 +1112,7 @@ public class HDImageView extends Component implements Component.TouchEventListen
         refreshRequiredTiles(true);
     }
 
-    // 刷新贴图
+    // Refresh map
     private void refreshRequiredTiles(boolean load) {
         if (mBitmapDataSource == null || mMappingMap == null) {
             return;
@@ -1245,6 +1351,7 @@ public class HDImageView extends Component implements Component.TouchEventListen
     }
 
     private void initialiseTileMap(Point maxTileDimensions) {
+        LogUtil.info(TAG, "initialiseTileMap method called");
         mMappingMap = new PlainArray<>();
         int sampleSize = mMaxSampleSize;
         int xTiles = 1;
@@ -1298,6 +1405,7 @@ public class HDImageView extends Component implements Component.TouchEventListen
     }
 
     public synchronized void onTilesInitialized(int sWidth, int sHeight, int sOrientation) {
+        LogUtil.info(TAG, "onTilesInitialized method called mSourceWidth: " + mSourceWidth + " mSourceHeight: " + mSourceHeight + " sWidth: " + sWidth + " sHeight: " + sHeight);
         if (mSourceWidth > 0 && mSourceHeight > 0 && (mSourceWidth != sWidth || mSourceHeight != sHeight)) {
             reset(false);
         }
@@ -1348,14 +1456,7 @@ public class HDImageView extends Component implements Component.TouchEventListen
     private Point getMaxBitmapDimensions(Canvas canvas) {
         int maxWidth = 2048;
         int maxHeight = 2048;
-        if (Build.SDK_INT >= 14) {
-            try {
-                maxWidth = (int) Canvas.class.getMethod("getMaximumBitmapWidth").invoke(canvas);
-                maxHeight = (int) Canvas.class.getMethod("getMaximumBitmapHeight").invoke(canvas);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
+
         return new Point(Math.min(maxWidth, mMaxMappingWidth), Math.min(maxHeight, mMaxMappingHeight));
     }
 
@@ -1617,6 +1718,8 @@ public class HDImageView extends Component implements Component.TouchEventListen
     }
 
     public final void resetScaleAndCenter() {
+
+        LogUtil.info(TAG, "resetScaleAndCenter method called");
         stopAnimator();
         mPendingScale = limitedScale(0);
         if (isReady()) {
@@ -1628,10 +1731,10 @@ public class HDImageView extends Component implements Component.TouchEventListen
     }
 
     /**
-     * 下一帧是否已经能绘制图像
+     * Whether the image can be drawn in the next frame
      *
-     * @return true 已经能显示成View上
-     * false 还在加载图层中
+     * @return true Can already be displayed on View
+     * false Still loading layers
      */
     public final boolean isReady() {
         return mReadySent;
@@ -1981,7 +2084,8 @@ public class HDImageView extends Component implements Component.TouchEventListen
                         bundle.putIntValue(SOURCE_Height, dimensions.getPointYToInt());
                     }
                     msg.setPacMap(bundle);
-                    mHandler.sendEvent(msg);
+                    mOriginalHandler.sendEvent(msg);
+                    LogUtil.info(TAG, "Mapping init runs and sent success message.");
                 }
 
                 @Override
@@ -1989,7 +2093,7 @@ public class HDImageView extends Component implements Component.TouchEventListen
                     InnerEvent msg = InnerEvent.get();
                     msg.eventId = MSG_INIT_FAILED;
                     msg.object = throwable;
-                    mHandler.sendEvent(msg);
+                    mOriginalHandler.sendEvent(msg);
                     throwable.printStackTrace();
                 }
             });
@@ -2029,8 +2133,8 @@ public class HDImageView extends Component implements Component.TouchEventListen
                 if (bitmap != null) {
                     mMapping.mBitmap = bitmap;
                     mMapping.mLoading = false;
-                    if (!mHandler.hasInnerEvent(MSG_TILE_LOAD_SUCCESS)) {
-                        mHandler.sendEvent(MSG_TILE_LOAD_SUCCESS);
+                    if (!mOriginalHandler.hasInnerEvent(MSG_TILE_LOAD_SUCCESS)) {
+                        mOriginalHandler.sendEvent(MSG_TILE_LOAD_SUCCESS);
                     } else if (BuildConfig.DEBUG) {
 //                        Log.d(TAG, "已经有相同的消息了");
                     }

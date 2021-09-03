@@ -24,17 +24,8 @@ package xyz.zpayh.hdimageview.core;
 //import androidx.annotation.Nullable;
 //import android.view.animation.DecelerateInterpolator;
 //import android.view.animation.Interpolator;
-import ohos.agp.animation.Animator;
+
 import ohos.app.Context;
-//ohos.agp.animation	Animator.TimelineCurve	interface	getCurvedTime
-import ohos.agp.animation.Animator.TimelineCurve;
-import ohos.media.image.PixelMap;
-
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
-import java.util.ArrayList;
-import java.util.List;
-
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import xyz.zpayh.hdimageview.datasource.Interceptor;
@@ -50,9 +41,13 @@ import xyz.zpayh.hdimageview.datasource.interceptor.NetworkInterceptor;
 import xyz.zpayh.hdimageview.datasource.interceptor.NetworkOrientationInterceptor;
 import xyz.zpayh.hdimageview.datasource.interceptor.ResourceInterceptor;
 import xyz.zpayh.hdimageview.util.Preconditions;
-import xyz.zpayh.hdimageview.HDImageView;
 
-import static xyz.zpayh.hdimageview.HDImageView.mFactor;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
+import java.util.List;
+
+//ohos.agp.animation	Animator.TimelineCurve	interface	getCurvedTime
 //import xyz.zpayh.hdimageview.Interpolator;
 
 /**

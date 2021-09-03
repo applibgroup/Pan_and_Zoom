@@ -7,8 +7,8 @@
 
     <xyz.zpayh.hdimageview.HDImageView
         ohos:id="$+id:library"
-        ohos:height="match_content"
-        ohos:width="match_content">
+        ohos:height="match_parent"
+        ohos:width="match_parent">
     </xyz.zpayh.hdimageview.HDImageView>
 
 </DependentLayout>
