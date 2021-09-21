@@ -141,7 +141,10 @@ public class SimpleValueAnimator implements ValueAnimator {
             } else {
 //                HandlerActionQueue handlerActionQueue = new HandlerActionQueue();
 //                handlerActionQueue.postDelayed(mLoopRunnable, 16);
-                HDImageView.mHandler.postTask(mLoopRunnable , 16);
+                if (mTarget instanceof HDImageView) {
+                  ((HDImageView) mTarget).getmOriginalHandler().postTask(mLoopRunnable , 16);
+                }
+            //    mTarget.postTask(mLoopRunnable , 16);
             }
         }
     };
@@ -208,7 +211,10 @@ public class SimpleValueAnimator implements ValueAnimator {
         dispatchStart();
         mFraction = 0f;
         mStartTime = getTime();
-        HDImageView.mHandler.postTask(mLoopRunnable , 16);
+        if (mTarget instanceof HDImageView) {
+            ((HDImageView) mTarget).getmOriginalHandler().postTask(mLoopRunnable , 16);
+        }
+     //   HDImageView.mHandler.postTask(mLoopRunnable , 16);
 //        InnerEvent ie = new InnerEvent();
 //        ie.callback
     }

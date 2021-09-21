@@ -102,16 +102,13 @@ public class NetworkInterceptor implements Interceptor{
             if (file == null) {
                 return null;
             }
-            try {
-                //InputStream inputStream = processBitmap(uri.toString());
-                DataAbilityHelper dataAbilityHelper = DataAbilityHelper.creator(networkInterceptor_context, uri);
-                InputStream inputStream = dataAbilityHelper.obtainInputStream(uri);
-//                return BitmapRegionDecoder.newInstance(new FileInputStream(file),false);
-                return ImageSource.create(inputStream , null);
-            } catch (IOException e) {
-                //e.printStackTrace();
-                return Interceptors.fixJPEGDecoder(file,e);
-            }
+            /*                //InputStream inputStream = processBitmap(uri.toString());
+                            DataAbilityHelper dataAbilityHelper = DataAbilityHelper.creator(networkInterceptor_context.getApplicationContext(), uri);
+                            InputStream inputStream = dataAbilityHelper.obtainInputStream(uri);
+            //                return BitmapRegionDecoder.newInstance(new FileInputStream(file),false);
+                            return ImageSource.create(inputStream , null);*/
+            ImageSource source = ImageSource.create(new FileInputStream(file), null);
+            return source;
         }
         return null;
     }

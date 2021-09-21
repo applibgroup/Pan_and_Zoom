@@ -17,7 +17,8 @@
     "package": "xyz.zpayh.hdimage",
     "name": ".MyApplication",
     "deviceType": [
-      "phone"
+      "phone",
+      "tablet"
     ],
     "distro": {
       "deliveryWithInstall": true,
@@ -48,6 +49,26 @@
     "reqPermissions": [
       {
         "name": "ohos.permission.INTERNET"
+      },
+      {
+        "name": "ohos.permission.READ_MEDIA",
+        "reason": "read media",
+        "usedScene": {
+          "ability": [
+            ".MainAbility"
+          ],
+          "when": "always"
+        }
+      },
+      {
+        "name": "ohos.permission.WRITE_MEDIA",
+        "reason": "write media",
+        "usedScene": {
+          "ability": [
+            ".MainAbility"
+          ],
+          "when": "always"
+        }
       }
     ]
   }

@@ -69,7 +69,7 @@ public class DefaultBitmapDataSource implements BitmapDataSource{
     public void init(Context context, Uri uri, Point dimensions, OnInitListener listener) {
         try {
             mDecoder = getDecoderWithInterceptorChain(uri);
-            mDecoder = getDecoderWithInterceptorChain(uri);
+       //     mDecoder = getDecoderWithInterceptorChain(uri);
             if (mDecoder != null) {
                 if (dimensions != null){
                     dimensions.modify(mDecoder.getImageInfo().size.width, mDecoder.getImageInfo().size.height);
@@ -106,8 +106,8 @@ public class DefaultBitmapDataSource implements BitmapDataSource{
             ohos.media.image.common.Rect nRect = new ohos.media.image.common.Rect();
             nRect.minX = sRect.left;
             nRect.width = sRect.right - sRect.left;
-            nRect.minY = sRect.bottom;
-            nRect.height = sRect.top - sRect.bottom;
+            nRect.minY = sRect.top;
+            nRect.height = sRect.bottom - sRect.top;
             decodingOptions.desiredRegion = nRect;
             return mDecoder.createPixelmap(decodingOptions);
         }
