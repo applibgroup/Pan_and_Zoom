@@ -76,6 +76,7 @@ public class AssetInterceptor implements Interceptor{
             if (BuildConfig.DEBUG) {
 //                Log.d("AssetInterceptor", "从我这加载");
             }
+
             DataAbilityHelper dataAbilityHelper = DataAbilityHelper.creator(context, uri);
             try {
 //                InputStream inputStream = mAssetManager.getRawFileEntry(getAssetName(uri));

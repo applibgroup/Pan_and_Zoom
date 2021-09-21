@@ -17,7 +17,8 @@
     "package": "xyz.zpayh.hdimage",
     "name": ".MyApplication",
     "deviceType": [
-      "phone"
+      "phone",
+      "tablet"
     ],
     "distro": {
       "deliveryWithInstall": true,

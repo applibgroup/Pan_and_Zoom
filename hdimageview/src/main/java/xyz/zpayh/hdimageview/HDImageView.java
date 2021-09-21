@@ -98,7 +98,8 @@ public class HDImageView extends Component
         Component.DrawTask,
         Component.LayoutRefreshedListener,
         Component.EstimateSizeListener,
-        Component.DraggedListener {
+        Component.DraggedListener,
+        Component.DoubleClickedListener{
 
     private static final String TAG = "HDImageView";
 
@@ -191,11 +192,9 @@ public class HDImageView extends Component
     private int mMaxTouchCount;
 
     //Quick swipe detector
-    private Component.DraggedListener mFlingDetector;
-//    private Component.ClickedListener mSingleClickDetector;
-//    private Component.DoubleClickedListener mDoubleClickDetector;
-    private Component.TouchEventListener mTouchDetector;
     private Component.TouchEventListener mLongPressDetector;
+    private TouchEvent mTouchEvent;
+    private VelocityDetector mVelocityDetector;
 
     //Tiling and image decoding
     private BitmapDataSource mBitmapDataSource;
@@ -220,7 +219,7 @@ public class HDImageView extends Component
 
     private OnBitmapLoadListener mOnBitmapLoadListener;
 
-    private LongClickedListener mOnLongClickListener;
+  //  private LongClickedListener mOnLongClickListener;
 
     private Paint mBitmapPaint;
     private Paint mMappingBgPaint;
@@ -310,14 +309,14 @@ public class HDImageView extends Component
         mScaleAnimationInterpolator = HDImageViewFactory.getInstance().getScaleAnimationInterpolator();
         mTranslationAnimationInterpolator = HDImageViewFactory.getInstance().getTranslationAnimationInterpolator();
 
-        EventRunner eventRunner = EventRunner.create();
+        EventRunner eventRunner = EventRunner.getMainEventRunner();
         mOriginalHandler = new OriginalHandler(eventRunner, this);
         mOriginalExecutor = Executors.newSingleThreadExecutor();
         setMinimumDpi(160);
         setDoubleTapZoomDpi(160);
      //   onMeasure();
-        setGestureDetector();
-        setDraggedListener(DRAG_VERTICAL , this);
+      //  setLongPress();
+
      //   run_Runner(this);
 
         if(attrset != null) {
@@ -347,9 +346,14 @@ public class HDImageView extends Component
 
         }
 
+        mVelocityDetector = VelocityDetector.obtainInstance();
+
         setLayoutRefreshedListener(this);
         setEstimateSizeListener(this);
         addDrawTask(this);
+        setTouchEventListener(this);
+        setDoubleClickedListener(this);
+        setDraggedListener(DRAG_HORIZONTAL_VERTICAL , this);
     }
 
     private static class OriginalHandler extends EventHandler {
@@ -599,47 +603,19 @@ public class HDImageView extends Component
         }
     }
 
-    private void setGestureDetector() {
-        setLongPress();
-        setClickGesture();
-    }
-
-    private void setLongPress() {
+/*    private void setLongPress() {
         mLongPressDetector = (component, touchEvent) -> {
             Date currentTime = Calendar.getInstance().getTime();
             if (currentTime.getTime() - touchEvent.getOccurredTime() <= 2000) {
                 if (isLongClickOn() && mOnLongClickListener != null) {
+                    LogUtil.info(TAG, "long click detected");
                     mOnLongClickListener.onLongClicked(HDImageView.this);
                 }
                 return true;
             }
-
             return false;
         };
-
-    }
-
-    private void setClickGesture() {
-        mTouchDetector = (TouchEventListener) (component, touchEvent) -> {
-            if(touchEvent.getPointerCount() == 1) {
-                simulateClick();
-                return true;
-            }
-
-            if(touchEvent.getPointerCount() == 2) {
-                if (mZoomEnabled && mQuickScaleEnabled && mReadySent && mViewTranslate != null) {
-                    MmiPoint touchPoint = touchEvent.getPointerPosition(0);
-                    PointF sourceCenter = viewToSourceCoordinate(new PointF(touchPoint.getX(), touchPoint.getY()));
-                    PointF viewFocus = new PointF(touchPoint.getX(), touchPoint.getY());
-                    startDoubleTapAnimator(sourceCenter, viewFocus);
-                    return true;
-                }
-                return false;
-            }
-
-            return false;
-        };
-    }
+    }*/
 
     @Override
     public void onRefreshed(Component component) {
@@ -707,31 +683,54 @@ public class HDImageView extends Component
         setLayoutConfig(layoutConfig);
     }*/
 
+   /* @Override
+    public void onClick(Component component) {
+        LogUtil.info(TAG, "single click detected");
+    //    simulateClick();
+
+        mIsZooming = false;
+        mIsPanning = false;
+        mMaxTouchCount = 0;
+    }*/
+
+    @Override
+    public void onDoubleClick(Component component) {
+        LogUtil.info(TAG, "double click detected");
+        if (mZoomEnabled && mQuickScaleEnabled && mReadySent && mViewTranslate != null) {
+            MmiPoint touchPoint = mTouchEvent.getPointerPosition(0);
+            PointF sourceCenter = viewToSourceCoordinate(new PointF(touchPoint.getX(), touchPoint.getY()));
+            PointF viewFocus = new PointF(touchPoint.getX(), touchPoint.getY());
+            startDoubleTapAnimator(sourceCenter, viewFocus);
+
+            mIsZooming = false;
+            mIsPanning = false;
+            mMaxTouchCount = 0;
+        }
+    }
+
     @Override
     public boolean onTouchEvent(Component component, TouchEvent event) {
+        this.mTouchEvent = event;
+
+        mVelocityDetector.addEvent(event);
+
         if (mValueAnimator != null && !mValueAnimator.isInterrupted()) {
             return true;
         }
 
         stopAnimator();
 
+        // Abort if not ready
         if (mViewTranslate == null) {
             return true;
         }
 
-        if (mTouchDetector.onTouchEvent(component, event)) {
+        /*if (mLongPressDetector.onTouchEvent(component, event)) {
             mIsZooming = false;
             mIsPanning = false;
             mMaxTouchCount = 0;
             return true;
-        }
-
-        if (mLongPressDetector.onTouchEvent(component, event)) {
-            mIsZooming = false;
-            mIsPanning = false;
-            mMaxTouchCount = 0;
-            return true;
-        }
+        }*/
 
         final int touchCount = event.getPointerCount();
         switch (event.getAction()) {
@@ -1015,10 +1014,10 @@ public class HDImageView extends Component
                         break;
                 }
                 mMatrix.setPolyToPoly(mSrcArray, 0, mDstArray, 0, 4);
-                RectFloat r = new RectFloat();
+                RectFloat r = new RectFloat(mapping.mViewRect);
                 mMatrix.mapRect(r);
                 PixelMapHolder pmh = new PixelMapHolder(mapping.mBitmap);
-                canvas.drawPixelMapHolderRect(pmh, r, mBitmapPaint);
+                canvas.drawPixelMapHolderRect(pmh, new RectFloat(mapping.mSourceRect), new RectFloat(mapping.mViewRect), mBitmapPaint);
             }
         }
     }
@@ -1236,7 +1235,7 @@ public class HDImageView extends Component
         return power;
     }
 
-    //适应边界
+    //Adapt to the boundary
     private void fitToBounds(boolean center) {
         boolean init = false;
         if (mViewTranslate == null) {
@@ -1265,7 +1264,7 @@ public class HDImageView extends Component
         }
 
 
-        // 计算padding的偏移效果
+        // Calculate the offset effect of padding
         final float xPaddingRatio = getPaddingLeft() > 0 || getPaddingRight() > 0
                 ? getPaddingLeft() / (float) (getPaddingRight() + getPaddingLeft())
                 : 0.5f;
@@ -1273,10 +1272,10 @@ public class HDImageView extends Component
                 ? getPaddingTop() / (float) (getPaddingTop() + getPaddingBottom())
                 : 0.5f;
 
-        // 限制缩放的大小
+        // Limit the size of the zoom
         float scale = limitedScale(sat.mScale);
         sat.mScale = scale;
-        // 获取缩放后的图片宽高
+        // Get the zoomed picture width and height
         float scaleWidth = scale * getShowWidth();
         float scaleHeight = scale * getShowHeight();
 
@@ -1284,7 +1283,7 @@ public class HDImageView extends Component
             if (scaleWidth < mCustomRange.width()) {
                 scale = (mCustomRange.width() * 1.0f) / (getShowWidth() * 1.0f);
                 sat.mScale = scale;
-                // 获取缩放后的图片宽高
+                // Get the zoomed picture width and height
                 scaleWidth = scale * getShowWidth();
                 scaleHeight = scale * getShowHeight();
             }
@@ -1292,7 +1291,7 @@ public class HDImageView extends Component
             if (scaleHeight < mCustomRange.height()) {
                 scale = (mCustomRange.height() * 1.0f) / (getShowHeight() * 1.0f);
                 sat.mScale = scale;
-                // 获取缩放后的图片宽高
+                // Get the zoomed picture width and height
                 scaleWidth = scale * getShowWidth();
                 scaleHeight = scale * getShowHeight();
             }
@@ -1573,10 +1572,10 @@ public class HDImageView extends Component
     }
 
     /**
-     * 将资源坐标转换为屏幕坐标。
+     * Convert resource coordinates to screen coordinates。
      *
-     * @param sourceCoordinate 资源坐标
-     * @return 返回屏幕上的位置
+     * @param sourceCoordinate Resource coordinates
+     * @return Return to the position on the screen
      */
     public final PointF sourceToViewCoordinate(@NotNull PointF sourceCoordinate) {
         return sourceToViewCoordinate(sourceCoordinate.x, sourceCoordinate.y, new PointF());
@@ -1598,12 +1597,12 @@ public class HDImageView extends Component
     }
 
     /**
-     * 将资源坐标转换为屏幕坐标。
+     * Convert resource coordinates to screen coordinates。
      *
-     * @param sourceX    资源的x坐标
-     * @param sourceY    资源的y坐标
-     * @param viewTarget 目标view坐标
-     * @return 返回屏幕上的位置
+     * @param sourceX    The x coordinate of the resource
+     * @param sourceY    The y coordinate of the resource
+     * @param viewTarget Target view coordinates
+     * @return Return to the position on the screen
      */
     private PointF sourceToViewCoordinate(float sourceX, float sourceY, @NotNull PointF viewTarget) {
         if (mViewTranslate == null) {
@@ -1842,13 +1841,13 @@ public class HDImageView extends Component
         return mSourceRegion;
     }
 
-    @Override
+    /*@Override
     public void setLongClickedListener(@Nullable LongClickedListener l) {
         if (!isLongClickOn()) {
             setLongClickable(true);
         }
         mOnLongClickListener = l;
-    }
+    }*/
 
     public void setOnBitmapLoadListener(OnBitmapLoadListener listener) {
         mOnBitmapLoadListener = listener;
@@ -1883,9 +1882,7 @@ public class HDImageView extends Component
                 .build();
         mValueAnimator.start();
 
-        if (BuildConfig.DEBUG) {
-//            Log.d(TAG, "startFilingAnimation");
-        }
+        LogUtil.info(TAG, "startFilingAnimation sCenterXEnd: " + sCenterXEnd + " sCenterYEnd: " + sCenterYEnd);
     }
 
     private void startZoomForCenter(PointF sCenter, float scaleEnd) {
@@ -1973,46 +1970,67 @@ public class HDImageView extends Component
         }
     }
 
+    DragInfo dragInfoStart, dragInfoEnd;
+
     @Override
     public void onDragDown(Component component, DragInfo dragInfo) {
-
+        LogUtil.info(TAG, "onDragDown");
+        dragInfoStart = dragInfoEnd = null;
     }
 
     @Override
     public void onDragStart(Component component, DragInfo dragInfo) {
-
+        LogUtil.info(TAG, "onDragStart");
+        dragInfoStart = dragInfo;
     }
 
     @Override
     public void onDragUpdate(Component component, DragInfo dragInfo) {
-
+        LogUtil.info(TAG, "onDragUpdate");
     }
 
     @Override
     public void onDragEnd(Component component, DragInfo dragInfo) {
+
+        LogUtil.info(TAG, "onDragEnd");
         mIsZooming = false;
         mIsPanning = false;
         mMaxTouchCount = 0;
 
-        Point e1 = new Point(dragInfo.startPoint);
-        Point e2 = new Point(dragInfo.updatePoint);
+        dragInfoEnd = dragInfo;
 
-        if (mTranslateEnabled && mReadySent && mViewTranslate != null && e1 != null && e2 != null
-                && (Math.abs(e1.getPointX() - e2.getPointX()) > 50 || Math.abs(e1.getPointY() - e2.getPointY()) > 50)
-                && (Math.abs(dragInfo.xVelocity) > 500 || Math.abs(dragInfo.yVelocity) > 500) && !mIsZooming) {
-            PointF vTranslateEnd =
-                    new PointF(mViewTranslate.x + ((float) dragInfo.xVelocity * 0.25f), mViewTranslate.y + ((float) dragInfo.yVelocity * 0.25f));
-            float sCenterXEnd = ((getWidth() / 2.0F) - vTranslateEnd.x) / mScale;
-            float sCenterYEnd = ((getHeight() / 2.0F) - vTranslateEnd.y) / mScale;
-            startFilingAnimation(sCenterXEnd, sCenterYEnd);
-//                    if (BuildConfig.DEBUG) Log.d(TAG, "onFling: 正在滑行");
-//                    return true;
-        }
+        permormDrag();
     }
 
     @Override
     public void onDragCancel(Component component, DragInfo dragInfo) {
+        LogUtil.info(TAG, "onDragCancel");
+    }
 
+    private void permormDrag() {
+        Point e1 = new Point(dragInfoStart.startPoint);
+        Point e2 = new Point(dragInfoEnd.updatePoint);
+
+        LogUtil.info(TAG,
+                "Perform drag e1: " + e1.toString() +
+                        " e2: " + e2.toString() +
+                        " condition 1st: " + (Math.abs(e1.getPointX() - e2.getPointX()) > 50 || Math.abs(e1.getPointY() - e2.getPointY()) > 50) +
+                        " condition 2nd: " + (Math.abs(mVelocityDetector.getHorizontalVelocity()) > 500 || Math.abs(mVelocityDetector.getVerticalVelocity()) > 500) +
+                        " mViewTranslate: " + mViewTranslate.toString()
+        );
+
+        if (mTranslateEnabled && mReadySent && mViewTranslate != null && e1 != null && e2 != null
+                && (Math.abs(e1.getPointX() - e2.getPointX()) > 50 || Math.abs(e1.getPointY() - e2.getPointY()) > 50)
+                && (Math.abs(mVelocityDetector.getHorizontalVelocity()) > 500 || Math.abs(mVelocityDetector.getVerticalVelocity()) > 500) && !mIsZooming){
+
+            LogUtil.info(TAG, "onDragEnd If condition true");
+
+            PointF vTranslateEnd =
+                    new PointF(mViewTranslate.x + ((float) mVelocityDetector.getHorizontalVelocity() * 0.25f), mViewTranslate.y + ((float) mVelocityDetector.getVerticalVelocity() * 0.25f));
+            float sCenterXEnd = ((getWidth() / 2.0F) - vTranslateEnd.x) / mScale;
+            float sCenterYEnd = ((getHeight() / 2.0F) - vTranslateEnd.y) / mScale;
+            startFilingAnimation(sCenterXEnd, sCenterYEnd);
+        }
     }
 
     private class MappingsInit implements Runnable {

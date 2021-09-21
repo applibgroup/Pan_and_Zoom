@@ -107,7 +107,7 @@ public class NetworkInterceptor implements Interceptor{
                             InputStream inputStream = dataAbilityHelper.obtainInputStream(uri);
             //                return BitmapRegionDecoder.newInstance(new FileInputStream(file),false);
                             return ImageSource.create(inputStream , null);*/
-            ImageSource source = ImageSource.create(file, null);
+            ImageSource source = ImageSource.create(new FileInputStream(file), null);
             return source;
         }
         return null;

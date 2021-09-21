@@ -73,7 +73,7 @@ public class FileInterceptor implements Interceptor {
 //            if (BuildConfig.DEBUG) {
 //                Log.d("FileInterceptor", "从我这加载");
 //            }
-            try {
+           /* try {
 //                return ImageSource.create(new FileInputStream(file.toString()),false);
 //                return ImageSource.create()
                 DataAbilityHelper dataAbilityHelper = DataAbilityHelper.creator(fileInterceptor_context , uri);
@@ -81,7 +81,9 @@ public class FileInterceptor implements Interceptor {
                 return ImageSource.create(inputStream, null);
             } catch (IOException e) {
                 return Interceptors.fixJPEGDecoder(file,e);
-            }
+            }*/
+
+            return ImageSource.create(new FileInputStream(file.toString()), null);
         }
         return null;
     }
